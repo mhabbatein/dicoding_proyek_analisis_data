@@ -181,7 +181,7 @@ def display_customer_segment(customer_segment_df):
 
 
 # Load cleaned data
-all_df = pd.read_csv("./main_data.csv")
+all_df = pd.read_csv("./dashboard/main_data.csv")
 
 datetime_columns = ["order_purchase_timestamp", "order_delivered_customer_date"]
 all_df.sort_values(by="order_purchase_timestamp", inplace=True)
