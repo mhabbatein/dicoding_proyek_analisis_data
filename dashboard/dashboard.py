@@ -83,6 +83,7 @@ def display_visualisasi_kedua(df):
     ax.set_xlabel("Waktu Delivery (hari)")
     ax.set_ylabel("Frekuensi")
     st.pyplot(fig)
+    st.dataframe(delivery_time.describe())
 
 def display_rfm(rfm_df):
     st.header("RFM Analysis")
