@@ -5,94 +5,6 @@ import streamlit as st
 import seaborn as sns
 
 
-def create_daily_orders_df(df):
-    daily_orders_df = df.resample(rule="D", on="order_purchase_timestamp").agg(
-        {"order_id": "nunique", "price": "sum"}
-    )
-    daily_orders_df = daily_orders_df.reset_index()
-    daily_orders_df.rename(
-        columns={"order_id": "order_count", "price": "revenue"}, inplace=True
-    )
-    return daily_orders_df
-
-
-def create_sum_order_items_df(df):
-    sum_order_items_df = (
-        df.groupby("product_category_name")["order_item_id"]
-        .count()
-        .sample(5)
-        .sort_values(ascending=False)
-        .reset_index()
-    )
-    sum_order_items_df.rename(columns={"order_item_id": "quantity_sold"}, inplace=True)
-
-    return sum_order_items_df
-
-
-def create_customer_count_by_state_df(df):
-    customer_count_by_state_df = (
-        df.groupby("customer_state")["customer_id"]
-        .nunique()
-        .sort_values(ascending=False)
-        .reset_index()
-    )
-    customer_count_by_state_df.rename(
-        columns={"customer_id": "customer_count"}, inplace=True
-    )
-    return customer_count_by_state_df
-
-def create_rfm_df(all_df):
-    reference_date = all_df['order_purchase_timestamp'].max()
-
-    rfm_df = all_df.groupby('customer_unique_id').agg({
-        # Recency:  reference date - latest purchase
-        'order_purchase_timestamp': lambda x: (reference_date - x.max()).days,
-        
-        # Frequency: Count of unique orders by each customer
-        'order_id': 'nunique',
-        
-        # Monetary: Sum of all purchases for each customer
-        'price': 'sum'
-        
-    }).reset_index()
-
-    rfm_df.rename(columns={
-        'order_purchase_timestamp': 'Recency',
-        'order_id': 'Frequency',
-        'price': 'Monetary'
-    }, inplace=True)
-
-    rfm_df['r_rank'] = rfm_df['Recency'].rank(ascending=False)
-    rfm_df['f_rank'] = rfm_df['Frequency'].rank(ascending=True)
-    rfm_df['m_rank'] = rfm_df['Monetary'].rank(ascending=True)
-
-    rfm_df['r_rank_norm'] = (rfm_df['r_rank']/rfm_df['r_rank'].max())*100
-    rfm_df['f_rank_norm'] = (rfm_df['f_rank']/rfm_df['f_rank'].max())*100
-    rfm_df['m_rank_norm'] = (rfm_df['m_rank']/rfm_df['m_rank'].max())*100
-    
-    rfm_df.drop(columns=['r_rank', 'f_rank', 'm_rank'], inplace=True)
-
-    rfm_df['RFM_score'] = 0.15*rfm_df['r_rank_norm']+0.28 * \
-    rfm_df['f_rank_norm']+0.57*rfm_df['m_rank_norm']
-    rfm_df['RFM_score'] *= 0.05
-    rfm_df = rfm_df.round(2)
-    rfm_df[['customer_unique_id', 'RFM_score']].head(5).sort_values(by="RFM_score", ascending=False)
-    
-    rfm_df["customer_segment"] = np.where(
-    rfm_df['RFM_score'] > 4.5, "Top customers", (np.where(
-        rfm_df['RFM_score'] > 4, "High value customer",(np.where(
-            rfm_df['RFM_score'] > 3, "Medium value customer", np.where(
-                rfm_df['RFM_score'] > 1.6, 'Low value customers', 'lost customers'))))))
-    customer_segment_df = rfm_df.groupby(by="customer_segment", as_index=False).customer_unique_id.nunique()
-
-    customer_segment_df['customer_segment'] = pd.Categorical(customer_segment_df['customer_segment'], [
-    "lost customers", "Low value customers", "Medium value customer",
-    "High value customer", "Top customers"])
-
-    return rfm_df, customer_segment_df
-
-
-
 def display_visualisasi_pertama(df):
     st.header("Pertanyaan 1")
     st.write("Bagaimana distribusi frekuensi pesanan berdasarkan status pesanan (order_status)?")
@@ -120,30 +32,6 @@ def display_visualisasi_kedua(df):
     ax.set_xlabel("Waktu Delivery (hari)")
     ax.set_ylabel("Frekuensi")
     st.pyplot(fig)
-
-def display_sum_order_items(sum_order_items_df, customer_count_by_state_df):
-    st.header("Top-Selling Products")
-    st.write("Jumlah Produk Terjual.")
-    st.dataframe(sum_order_items_df)
-
-    fig, ax = plt.subplots()
-    sum_order_items_df.plot(
-        kind="bar", x="product_category_name", y="quantity_sold", ax=ax, legend=False
-    )
-    ax.set_ylabel("Quantity Sold")
-    ax.set_xticklabels(ax.get_xticklabels(), rotation=45)
-    st.pyplot(fig)
-
-    st.header("Customer Count by State")
-    st.write("Jumlah pelanggan berdasarkan negara.")
-
-    fig, ax = plt.subplots(figsize=(10, 6))
-    customer_count_by_state_df.plot(
-        kind="bar", x="customer_state", y="customer_count", ax=ax, legend=False
-    )
-    ax.set_ylabel("Customer Count")
-    st.pyplot(fig)
-
 
 def display_rfm(rfm_df):
     st.header("RFM Analysis")
