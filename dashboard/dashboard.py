@@ -91,16 +91,35 @@ def create_rfm_df(all_df):
 
     return rfm_df, customer_segment_df
 
-def display_daily_orders(daily_orders_df):
-    st.header("Daily Orders Overview")
-    st.write("Jumlah Pesanan dan Pendapatan Yang dihasilkan Setiap Hari")
 
+
+def display_visualisasi_pertama(df):
+    st.header("Pertanyaan 1")
+    st.write("Bagaimana distribusi frekuensi pesanan berdasarkan status pesanan (order_status)?")
+    status_counts = df["order_status"].value_counts()
     fig, ax = plt.subplots()
-    daily_orders_df.set_index("order_purchase_timestamp")[
-        ["order_count", "revenue"]
-    ].plot(ax=ax)
+    ax.bar(x=status_counts.index, height=status_counts.values, color="skyblue")
+    
+    ax.set_title("Distribusi Frekuensi Pesanan berdasarkan Status Pemesanan")
+    ax.set_xlabel("Status Pemesanan")
+    ax.set_ylabel("Frekuensi")
+    
+    ax.set_xticks(range(len(status_counts.index)))
+    ax.set_xticklabels(status_counts.index, rotation=45)
+    
     st.pyplot(fig)
+    st.dataframe(status_counts)
 
+def display_visualisasi_kedua(df):
+    st.header("Pertanyaan 2")
+    st.write("Bagaimana rata-rata waktu yang dibutuhkan dari pembelian hingga pengiriman ke pelanggan (dari order_purchase_timestamp hingga order_delivered_customer_date)?")
+    delivery_time = df['delivery_time']
+    fig, ax = plt.subplots()
+    ax.hist(delivery_time, bins=20, color="skyblue", edgecolor="black")
+    ax.set_title("Distribusi Waktu Delivery")
+    ax.set_xlabel("Waktu Delivery (hari)")
+    ax.set_ylabel("Frekuensi")
+    st.pyplot(fig)
 
 def display_sum_order_items(sum_order_items_df, customer_count_by_state_df):
     st.header("Top-Selling Products")
@@ -216,14 +235,9 @@ main_df = all_df[
 st.title("E-Commerce Data Analysis Dashboard")
 
 
-daily_orders_df = create_daily_orders_df(main_df)
-sum_order_items_df = create_sum_order_items_df(main_df)
-customer_count_by_state_df = create_customer_count_by_state_df(main_df)
 rfm_df, customer_segment_df = create_rfm_df(main_df)
 
-# Display each section with its respective helper function
-display_daily_orders(daily_orders_df)
-display_sum_order_items(sum_order_items_df, customer_count_by_state_df)
+display_visualisasi_pertama(main_df)
+display_visualisasi_kedua(main_df)
 display_rfm(rfm_df)
-display_customer_segment(customer_segment_df)
 
