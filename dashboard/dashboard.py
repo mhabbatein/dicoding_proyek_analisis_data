@@ -4,6 +4,57 @@ import matplotlib.pyplot as plt
 import streamlit as st
 import seaborn as sns
 
+def create_rfm_df(all_df):
+    reference_date = all_df['order_purchase_timestamp'].max()
+
+    rfm_df = all_df.groupby('customer_unique_id').agg({
+        # Recency:  reference date - latest purchase
+        'order_purchase_timestamp': lambda x: (reference_date - x.max()).days,
+        
+        # Frequency: Count of unique orders by each customer
+        'order_id': 'nunique',
+        
+        # Monetary: Sum of all purchases for each customer
+        'price': 'sum'
+        
+    }).reset_index()
+
+    rfm_df.rename(columns={
+        'order_purchase_timestamp': 'Recency',
+        'order_id': 'Frequency',
+        'price': 'Monetary'
+    }, inplace=True)
+
+    rfm_df['r_rank'] = rfm_df['Recency'].rank(ascending=False)
+    rfm_df['f_rank'] = rfm_df['Frequency'].rank(ascending=True)
+    rfm_df['m_rank'] = rfm_df['Monetary'].rank(ascending=True)
+
+    rfm_df['r_rank_norm'] = (rfm_df['r_rank']/rfm_df['r_rank'].max())*100
+    rfm_df['f_rank_norm'] = (rfm_df['f_rank']/rfm_df['f_rank'].max())*100
+    rfm_df['m_rank_norm'] = (rfm_df['m_rank']/rfm_df['m_rank'].max())*100
+    
+    rfm_df.drop(columns=['r_rank', 'f_rank', 'm_rank'], inplace=True)
+
+    rfm_df['RFM_score'] = 0.15*rfm_df['r_rank_norm']+0.28 * \
+    rfm_df['f_rank_norm']+0.57*rfm_df['m_rank_norm']
+    rfm_df['RFM_score'] *= 0.05
+    rfm_df = rfm_df.round(2)
+    rfm_df[['customer_unique_id', 'RFM_score']].head(5).sort_values(by="RFM_score", ascending=False)
+    
+    rfm_df["customer_segment"] = np.where(
+    rfm_df['RFM_score'] > 4.5, "Top customers", (np.where(
+        rfm_df['RFM_score'] > 4, "High value customer",(np.where(
+            rfm_df['RFM_score'] > 3, "Medium value customer", np.where(
+                rfm_df['RFM_score'] > 1.6, 'Low value customers', 'lost customers'))))))
+    customer_segment_df = rfm_df.groupby(by="customer_segment", as_index=False).customer_unique_id.nunique()
+
+    customer_segment_df['customer_segment'] = pd.Categorical(customer_segment_df['customer_segment'], [
+    "lost customers", "Low value customers", "Medium value customer",
+    "High value customer", "Top customers"])
+
+    return rfm_df, customer_segment_df
+
+
 
 def display_visualisasi_pertama(df):
     st.header("Pertanyaan 1")
